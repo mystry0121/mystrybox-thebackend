@@ -1,3 +1,19 @@
+import os, uuid
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import replicate
+
+app = FastAPI()
+JOBS = {}
+
+class GenerateRequest(BaseModel):
+    prompt: str
+    duration_sec: int = 8
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+
 @app.post("/v1/generate")
 def generate(req: GenerateRequest):
     if not os.getenv("REPLICATE_API_TOKEN"):
