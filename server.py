@@ -31,13 +31,11 @@ def generate(req: GenerateRequest):
             }
         )
 
-        # Replicate can return list, string, or other file-like objects.
-# Force it to a plain string so FastAPI can JSON-encode it.
-if isinstance(output, list) and len(output) > 0:
-    audio_url = str(output[0])
-else:
-    audio_url = str(output)
-
+        # Force output into a plain string for JSON encoding
+        if isinstance(output, list) and len(output) > 0:
+            audio_url = str(output[0])
+        else:
+            audio_url = str(output)
 
         JOBS[job_id]["status"] = "succeeded"
         JOBS[job_id]["audio_url"] = audio_url
