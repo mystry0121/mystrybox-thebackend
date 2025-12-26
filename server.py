@@ -1,22 +1,3 @@
-import os, uuid
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import replicate
-
-app = FastAPI()
-JOBS = {}
-
-class GenerateRequest(BaseModel):
-    prompt: str
-    duration_sec: int = 8
-    bpm: int | None = None
-    key: str | None = None
-    model_version: str = "large"
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
 @app.post("/v1/generate")
 def generate(req: GenerateRequest):
     if not os.getenv("REPLICATE_API_TOKEN"):
@@ -30,19 +11,26 @@ def generate(req: GenerateRequest):
             "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
             input={
                 "prompt": req.prompt,
-                "duration": req.duration_sec,
-                "model_version": req.model_version
+                "duration": req.duration_sec
             }
         )
+
+        audio_url = output[0] if isinstance(output, list) else output
+
         JOBS[job_id]["status"] = "succeeded"
-        JOBS[job_id]["audio_url"] = output[0]
+        JOBS[job_id]["audio_url"] = audio_url
+
+        return {
+            "job_id": job_id,
+            "status": "succeeded",
+            "audio_url": audio_url
+        }
 
     except Exception as e:
         JOBS[job_id]["status"] = "failed"
         JOBS[job_id]["error"] = str(e)
-
-    return {"job_id": job_id, "status": JOBS[job_id]["status"]}
-
-@app.get("/v1/jobs/{job_id}")
-def job(job_id: str):
-    return JOBS.get(job_id, {"status": "not_found"})
+        return {
+            "job_id": job_id,
+            "status": "failed",
+            "error": str(e)
+        }
